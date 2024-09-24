@@ -26,7 +26,7 @@ app.use(cors({
 // middlewares
 app.use(express.json());
 app.use(cookieParser());
-let uri = 'mongodb+srv://og:tA15wcjNrW9ZSzfZ@cluster0.sul4j.mongodb.net/blog-db?retryWrites=true&w=majority&appName=Cluster0';
+let uri = 'mongodb+srv://og:OG1234@cluster0.sul4j.mongodb.net/Cluster0?retryWrites=true&w=majority&appName=Cluster0' 
 /* let uri = 'mongodb+srv://makpentarok:su8vOU44hJDfCnIDK@cluster0.sul4j.mongodb.net/Cluster0?retryWrites=true&w=majority&appName=Cluster0' */
 mongoose.connect(uri)
 .then(
