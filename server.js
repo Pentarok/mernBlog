@@ -30,7 +30,7 @@ app.use(cookieParser());
 const dbUri = process.env.MONGO_URI || 'mongodb://localhost:27017/yourDBName';
 console.log("Connecting to MongoDB...");
 const Uri= 'mongodb://127.0.0.1:27017/Employees'
-mongoose.connect(Uri, {
+mongoose.connect(dbUri, {
     socketTimeoutMS: 10000,  // 10 seconds timeout
     connectTimeoutMS: 10000,  // 10 seconds timeout
 }).then(() => {
