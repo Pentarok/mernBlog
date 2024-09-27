@@ -38,7 +38,9 @@ mongoose.connect(Uri, {
 }).catch((err) => {
     console.error("MongoDB connection error:", err.message);
 });
-
+app.get('*', (req, res) => {
+  res.send('Hello from Vercel!');
+});
 app.listen('3000', () => {
     console.log('server is running on port 3000');
 });
