@@ -1,63 +1,374 @@
+require('dotenv').config(); // Ensure dotenv is loaded
+const bucketName = process.env.BUCKET_NAME;
+
+console.log('S3 Bucket Name:', bucketName); // This
+const nodemailer = require('nodemailer');
+
 const express = require('express');
-const mongoose = require ('mongoose');
+const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
-const CookieParser = require('cookie-parser');
-const multer = require('multer');  // Import multer
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const UserModel = require('./models/CreateUser');
-const PostModel =require('./models/CreatePost')
-const fs = require('fs');
+const PostModel = require('./models/CreatePost');
 const jwt = require('jsonwebtoken');
 
+const multer = require('multer');  // Import multer
+const multerS3 = require('multer-s3');  // Import multer S3
 
-
-const cookieParser = require('cookie-parser');
-var authorname;
-var UserId;
 const app = express();
-app.use('/uploads', express.static('uploads'));
-
-
 app.use(cors({
-    origin:'http://localhost:5173',
-    methods:["GET,POST,PUT,DELETE"],
-    credentials:true
+    origin: 'http://localhost:5173',
+    methods: ["GET,POST,PUT,DELETE"],
+    credentials: true
 }));
-// middlewares
+
 app.use(express.json());
 app.use(cookieParser());
-let uri = 'mongodb+srv://og:OG1234@cluster0.sul4j.mongodb.net/Cluster0?retryWrites=true&w=majority&appName=Cluster0' 
-/* let uri = 'mongodb+srv://makpentarok:su8vOU44hJDfCnIDK@cluster0.sul4j.mongodb.net/Cluster0?retryWrites=true&w=majority&appName=Cluster0' */
-mongoose.connect(uri)
-.then(
-    console.log('Connected to the database')
-)
 
-app.listen('3000',()=>{
+
+const dbUri = process.env.MONGO_URI || 'mongodb://localhost:27017/yourDBName';
+console.log("Connecting to MongoDB...");
+const Uri= 'mongodb://127.0.0.1:27017/Employees'
+mongoose.connect(Uri, {
+    socketTimeoutMS: 10000,  // 10 seconds timeout
+    connectTimeoutMS: 10000,  // 10 seconds timeout
+}).then(() => {
+    console.log("Connected to the database");
+}).catch((err) => {
+    console.error("MongoDB connection error:", err.message);
+});
+
+app.listen('3000', () => {
     console.log('server is running on port 3000');
-})
+});
+const AWS = require('aws-sdk'); // Ensure AWS SDK is imported
 
-const verifyUser=(req,res,next)=>{
-    const token = req.cookies.token;
-    if(!token){
-    return    res.json("Token is missing");
-    }else{
-        jwt.verify(token,"manu-secret-key",(err,decoded)=>{
-            if(err){
-                res.json("Token error")
-            }else{
-                if(decoded.role=='admin'){
-                    next();
-                }else{
-                    return res.json("Not admin")
-                }
+
+
+const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
+const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
+const REGION = process.env.AWS_REGION;
+const BUCKET_NAME = process.env.BUCKET_NAME; // Ensure BUCKET_NAME is defined
+
+const s3 = new AWS.S3({
+    httpOptions: { timeout: 300000 } ,// A
+    credentials: {
+        accessKeyId: ACCESS_KEY_ID,
+        secretAccessKey: SECRET_ACCESS_KEY,
+    },
+    region: REGION
+});
+
+const uploadToAws = (req, res, next) => {
+    const upload = multer({
+        storage: multerS3({
+            s3: s3,
+            bucket: BUCKET_NAME,
+            metadata: function(req, file, cb) {
+                cb(null, { fieldname: file.fieldname });
+            },
+            key: function(req, file, cb) {
+                cb(null, file.originalname);
             }
         })
+    }).single("file");
+
+    // First, upload the file
+    upload(req, res, (err) => {
+        if (err) {
+            console.error("S3 upload error:", err);
+            return res.status(500).json({ error: "Error occurred while uploading" });
+        }
+
+        // Log the uploaded file information
+        console.log("Request file info:", req.file);
+
+        // Token Check
+        const token = req.cookies.token;
+        if (!token) {
+            console.error("Token is missing.");
+            return res.status(401).json({ error: "Token is missing" });
+        }
+
+        // Verify token
+        jwt.verify(token, "manu-secret-key", (err, decoded) => {
+            if (err) {
+                console.error("Token verification failed:", err.message);
+                return res.status(401).json({ error: "Token is invalid or expired" });
+            }
+
+            // Add decoded user info to the request for later use
+            req.user = decoded;
+            console.log("Token successfully decoded:", decoded);
+            
+            // Proceed to the next middleware or route handler
+            next();
+        });
+    });
+};
+
+
+const verifyUser = (req, res, next) => {
+  const token = req.cookies.token;
+
+  if (!token) {
+      console.error("Token is missing");
+      return res.status(401).json({ message: "Token is missing" });
+  } else {
+      jwt.verify(token, "manu-secret-key", (err, decoded) => {
+          if (err) {
+              console.error("Token verification error:", err);
+              return res.status(401).json({ message: "Token verification failed" });
+          } else {
+              if (decoded.role === 'admin') {
+                  console.log("Admin access granted");
+                  next(); // Proceed to the next middleware/route handler
+              } else {
+                  console.warn("User is not an admin");
+                  return res.status(403).json({ message: "You do not have admin access" });
+              }
+          }
+      });
+  }
+};
+
+app.get('/dashboard', verifyUser, (req, res) => {
+ 
+  res.json('success')
+});
+
+
+app.post('/posts', uploadToAws, (req, res) => {
+    const { content, title, summary } = req.body;
+    const authorname = req.user.author; // Get the author name from the decoded token
+    const userId = req.user.id; // Get the user ID from the decoded token
+    const fileUrl = req.file ? req.file.location : null;
+
+    // Validate required fields
+    if (!title || !summary || !content) {
+        console.error("Missing required fields: title, summary, content");
+        return res.status(400).json({ error: "All fields are required" });
     }
-}
-app.get('/dashboard',verifyUser,(req,res)=>{
-    res.json("Success");
-})
+
+    // Attempt to create a new post in MongoDB
+    console.log("Creating post in MongoDB...");
+
+    PostModel.create({
+        title,
+        summary,
+        content,
+        file: fileUrl,
+        author: authorname,
+        user: userId
+    })
+    .then((post) => {
+        console.log("Post created successfully:", post._id);
+        res.status(201).json({ status: 'Ok', post });
+    })
+    .catch((err) => {
+        console.error("MongoDB post creation failed:", err.message);
+        res.status(500).json({ error: "Post creation failed", details: err });
+    });
+});
+
+// Get all posts
+app.get('/posts', async (req, res) => {
+    const posts = await PostModel.find({});
+    res.json({ posts });
+});
+
+app.get('/post/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const post = await PostModel.findById(id);
+        res.json(post);
+    } catch (error) {
+        res.json({ error });
+    }
+});
+
+// Update a post and handle file uploads to S3
+app.put('/post/update/:id', uploadToAws, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const post = await PostModel.findById(id);
+
+        let newFileUrl = post.file; // Default to existing file URL
+        if (req.file) {
+          let oldFile=post.file;
+            // Update to new file URL if a new file is uploaded
+            deleteFileFromS3(oldFile);
+            newFileUrl = req.file.location;
+
+        }
+
+        const updatedDoc = await PostModel.findByIdAndUpdate(id, {
+            title: req.body.title,
+            content: req.body.content,
+            summary: req.body.summary,
+            file: newFileUrl
+        }, { new: true });
+
+        res.json(updatedDoc);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete post
+async function deleteFileFromS3(fileUrl) {
+    try {
+      // Parse the file URL and extract the file key
+      const parsedUrl = new URL(fileUrl);
+      const bucketName = process.env.BUCKET_NAME;
+  
+      if (parsedUrl.host === `${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com`) {
+        // Extract key from virtual-hosted-style URL
+        const fileKey = decodeURIComponent(parsedUrl.pathname.slice(1));
+        console.log("Extracted file key:", fileKey);
+  
+        // Delete the file from S3
+        const deleteParams = {
+          Bucket: bucketName,
+          Key: fileKey
+        };
+        const deleteResult = await s3.deleteObject(deleteParams).promise();
+        console.log("S3 delete result:", deleteResult);
+      } else {
+        console.error("Invalid file URL format:", fileUrl);
+      }
+    } catch (error) {
+      console.error("Error deleting file from S3:", error);
+    }
+  }
+  
+  // Example usage:
+
+
+app.post('/posts/:id', async (req, res) => {
+    try {
+        // Find the post by ID
+        const post = await PostModel.findById(req.params.id);
+        
+        if (!post) {
+            console.error("Post not found:", req.params.id);
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        // Extract file URL and check if there is an associated file
+        const fileUrl = post.file;
+        if (fileUrl) {
+          
+            deleteFileFromS3(fileUrl)
+        } else {
+            console.log("No file associated with this post or the file is null.");
+        }
+
+        // Delete the post from the database
+        await PostModel.findByIdAndDelete(req.params.id);
+        console.log(`Post ${req.params.id} deleted successfully`);
+
+        res.json({ status: 'Ok', message: 'Post and associated file deleted successfully' });
+    } catch (err) {
+        console.error("Error deleting post or file:", err);
+        res.status(500).json({ error: "Post deletion failed", details: err.message });
+    }
+});
+
+// Configure Nodemailer Transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // You can use any other email service provider
+  auth: {
+    user: process.env.EMAIL_USER,  // Email user from .env file
+    pass: process.env.EMAIL_PASS   // Email password from .env file
+  }
+});
+
+// Forgot Password Route
+app.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    // Find the user by email
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: "User with this email does not exist" });
+    }
+
+    // Generate a reset token (JWT)
+    const resetToken = jwt.sign(
+      { email: user.email, id: user._id },
+      process.env.JWT_RESET_PASSWORD_KEY,
+      { expiresIn: '1h' }  // Token expires in 1 hour
+    );
+
+    // Define the reset URL to be sent in the email
+
+    const frontEndEnpoint=process.env.WEB_URL
+    const resetURL = `${frontEndEnpoint}/reset-password/${user._id}/${resetToken}`;
+
+    // Email content
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Password Reset Request',
+      html: `
+        <p>You requested a password reset.</p>
+        <p>Click the following link to reset your password: <a href="${resetURL}">${resetURL}</a></p>
+        <p>This link will expire in 1 hour.</p>
+      `
+    };
+
+    // Send the email
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log(error);
+        return res.status(500).json({ error: "Failed to send email" });
+      } else {
+        console.log('Email sent: ' + info.response);
+        return res.json({ message: 'Password reset email sent' });
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Password Reset Route
+app.post('/reset-password/:id/:token', async (req, res) => {
+  const { id, token } = req.params;
+  const { password } = req.body;
+
+  try {
+    // Verify the reset token
+    jwt.verify(token, process.env.JWT_RESET_PASSWORD_KEY, async (err, decoded) => {
+      if (err) {
+        return res.status(400).json({ error: "Invalid or expired reset token" });
+      }
+
+      // Find the user by ID
+      const user = await UserModel.findById(id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Update the user's password in the database
+      user.password = hashedPassword;
+      await user.save();
+
+      res.json({ message: "Password has been reset successfully" });
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 app.post('/signup',async (req,res)=>{
   
     try {
@@ -100,61 +411,23 @@ if(userExist){
 }
 })
 
-app.post('/forgot-password',async (req,res)=>{
-    const {email}=req.body;
-const userEmail = email;
-var UserExist = await UserModel.findOne({email:email})
-console.log(UserExist)
-if(UserExist){
-  var token2 =  jwt.sign({email:UserExist.email,id:UserExist.id},"manu-reset-pwd",{expiresIn:'1d'})
-  res.cookie('token2',token2,{httpOnly:true});
-}
-    //nodemailer to send the password reset link
-    var nodemailer = require('nodemailer');
 
-var transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'makpentarok@gmail.com',
-    pass: 'vffh rvfe pscv oxts'
-  }
-});
 
-var mailOptions = {
-  from: 'makpentarok@gmail.com',
-  to: userEmail,
 
-  subject: 'Password Reset',
-  text: `http://localhost:5173/reset-password/${UserExist.id}/${token2}`
-};
 
-transporter.sendMail(mailOptions, function(error, info){
-  if (error) {
-    console.log(error);
-  } else {
-    console.log('Email sent: ' + info.response);
-    res.json('success')
-  }
-});
-})
-app.post('/reset-password/:id/:token', async (req, res) => {
-    const { id, token } = req.params;
-    const { password } = req.body;  // Note: password should be in the request body, not in params
 
-    try {
-        jwt.verify(token, "manu-reset-pwd", async (err, decoded) => {
-            if (err) {
-                return res.json("Token is invalid or expired");
-            } else {
-                const hashedPassword = await bcrypt.hash(password, 10); // Use await to handle the promise
-                await UserModel.findByIdAndUpdate(id, { password: hashedPassword }); // Await to ensure the update completes
-                res.json("Password reset successful");
-            }
-        });
-    } catch (error) {
-        res.status(500).json("Server error");
-    }
-});
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 app.get('/user',(req,res)=>{
@@ -178,50 +451,7 @@ app.get('/user',(req,res)=>{
     }
 })
 
-const upload = multer({ dest: './uploads' });  // Initialize multer to handle file uploads
-app.post('/posts', upload.single('file'), (req, res) => {
-    const token = req.cookies.token;  // Get the token from cookies
 
-    if (!token) {
-        return res.status(401).json("Token is missing");
-    }
-
-    // Verify the token to extract user info
-    jwt.verify(token, "manu-secret-key", (err, decoded) => {
-        if (err) {
-            return res.status(401).json("Token is invalid or expired");
-        }
-
-        // Extract author name and user ID from the decoded token
-        const authorname = decoded.author;
-        const userId = decoded.id;
-
-        // Extract title, summary, and content from the request body
-        const { title, summary, content } = req.body;
-
-        // Process the file if it's present
-        let filePath = null;
-        if (req.file) {
-            const { originalname, path } = req.file;
-            const ext = originalname.split('.').pop();
-            filePath = `${path}.${ext}`;
-            fs.renameSync(path, filePath);  // Rename the file to include its extension
-        }
-        const defaultFile = 'uploads/placeholder.jpg'; // Default placeholder file path
-
-        // Create a new post with or without the file
-        PostModel.create({
-            title,
-            summary,
-            content,
-            file: filePath || null ,// Use placeholder if no file is uploaded
-            author: authorname,
-            user: userId
-        })
-        .then((post) => res.json({ status: 'Ok', post }))
-        .catch((err) => res.status(500).json({ error: "Post creation failed", details: err }));
-    });
-});
 
 app.get('/posts', async (req,res)=>{
 const posts = await PostModel.find({})
@@ -267,70 +497,6 @@ app.get('/post/:id', async (req,res)=>{
 
 })
 
-
-
-app.put('/post/update/:id', upload.single('file'), async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        // Fetch the current post from the database
-        const post = await PostModel.findById(id);
-
-        // If there's a new file uploaded, handle the file replacement logic
-        let newPath = post.file; // Default to existing file path
-        if (req.file) {
-            // Delete the old file if it exists
-            if (post.file) {
-                fs.unlink(post.file, (err) => {
-                    if (err) {
-                        console.error('Error deleting old file:', err);
-                    } else {
-                        console.log('Old file deleted successfully');
-                    }
-                });
-            }
-
-            // Process the new file
-            const { originalname, path } = req.file;
-            const ext = originalname.split('.').pop();
-            newPath = `${path}.${ext}`;
-            fs.renameSync(path, newPath);  // Rename the file to include its extension
-        }
-
-        // Update the document with the new fields and new file path (if any)
-        const updatedDoc = await PostModel.findByIdAndUpdate(id, {
-            title: req.body.title,
-            content: req.body.content,
-            summary: req.body.summary,
-            file: newPath, // Use the new file path if a new file was uploaded, else use the existing one
-        }, { new: true });
-
-        res.json(updatedDoc);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Ensure your file deletion logic only removes the specific post's file
-app.post('/posts/:id', async (req, res) => {
-    try {
-        const post = await PostModel.findById(req.params.id);
-
-        if (!post) {
-            return res.status(404).json("Post not found");
-        }
-
-        // Remove the file if it is not the placeholder
-        if (post.file && post.file !== 'uploads/placeholder.jpg') {
-            fs.unlinkSync(post.file);
-        }
-
-        await PostModel.findByIdAndDelete(req.params.id);
-        res.json({ status: 'Ok', message: 'Post deleted successfully' });
-    } catch (err) {
-        res.status(500).json({ error: "Post deletion failed", details: err });
-    }
-});
 
 
 app.get('/user/status',(req,res)=>{
@@ -383,11 +549,7 @@ app.post('/user/social-links/:postId', async (req, res) => {
     }
   });
   
-/*
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' }); // or configure to your specific needs
 
-*/
 
 
 
@@ -461,4 +623,9 @@ app.put('/api/user/profile', async (req, res) => {
     }
   });
   
+
+
+
+
+
 
