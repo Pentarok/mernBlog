@@ -401,8 +401,15 @@ if(userExist){
         const token = jwt.sign({email:userExist.email,id:userExist._id,role:userExist.role,author:userExist.name},
             "manu-secret-key",{expiresIn:'1d'}
         )
-        res.cookie('token',token,{httpOnly:true});
-        res.json({userExist,message:'Login success'});
+
+
+        res.cookie('token', token, {
+   httpOnly: true,
+   secure: process.env.NODE_ENV === 'production', // Only send cookie over HTTPS in production
+   sameSite: 'None',  // Allows cross-origin cookies, required when using secure cookies in cross-site requests
+   domain: https://mern-blog-chi-eight.vercel.app
+});
+        
     }else{
         res.json({status:'405',message:'Your credentials are invalid'})
     }
