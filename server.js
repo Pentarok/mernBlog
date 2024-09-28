@@ -18,7 +18,7 @@ const multerS3 = require('multer-s3');  // Import multer S3
 
 const app = express();
 app.use(cors({
-  origin: process.env.WEB_URL,
+  origin:'*', // Allow all origins
 methods: ["GET", "POST", "PUT", "DELETE"],
 credentials: true
 
