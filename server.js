@@ -17,12 +17,16 @@ const multer = require('multer');  // Import multer
 const multerS3 = require('multer-s3');  // Import multer S3
 
 const app = express();
-app.use(cors({
-  origin:'https://front-blog-eta.vercel.app',
-methods: ["GET", "POST", "PUT", "DELETE"],
-withCredentials:true
 
+
+
+// CORS middleware configuration
+app.use(cors({
+  origin: 'https://front-blog-eta.vercel.app', // Allow requests only from this origin
+  methods: ["GET", "POST", "PUT", "DELETE"], // Specify allowed methods
+  credentials: true // Allow credentials (like cookies, authorization headers, etc.)
 }));
+
 
 
 app.use(express.json());
