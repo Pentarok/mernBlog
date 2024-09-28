@@ -404,8 +404,7 @@ if(userExist){
 
 
         res.cookie('token', token, {
-   httpOnly: true,
-   secure: process.env.NODE_ENV === 'production', // Only send cookie over HTTPS in production
+  
    sameSite: 'None',  // Allows cross-origin cookies, required when using secure cookies in cross-site requests
    domain: https://mern-blog-chi-eight.vercel.app
 });
