@@ -39,9 +39,7 @@ mongoose.connect(dbUri, {
     console.error("MongoDB connection error:", err.message);
 });
 
-app.use((req, res, next) => {
-    res.status(404).send('Hello, welcome to MERN Blog');
-});
+
 
 app.listen('3000', () => {
     console.log('server is running on port 3000');
