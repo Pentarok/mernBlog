@@ -407,7 +407,7 @@ if(userExist){
    httpOnly: true,
    secure: process.env.NODE_ENV === 'production',
    sameSite: 'None', // Required if cross-origin
-   domain: 'https://mern-blog-git-main-mak-pentaroks-projects.vercel.app' // Backend domain
+   domain: 'https://mern-blog-chi-eight.vercel.app' // Backend domain
 });
 
         
