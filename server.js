@@ -18,9 +18,9 @@ const multerS3 = require('multer-s3');  // Import multer S3
 
 const app = express();
 app.use(cors({
-  origin:'*', // Allow all origins
+  origin:'https://front-blog-eta.vercel.app',
 methods: ["GET", "POST", "PUT", "DELETE"],
-credentials: true
+withCredentials:true
 
 }));
 
