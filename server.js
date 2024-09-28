@@ -26,10 +26,7 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// Catch-all for undefined routes
-app.use((req, res) => {
-    res.status(404).send('Hello from MERN Blog');
-});
+
 const dbUri = process.env.MONGO_URI || 'mongodb://localhost:27017/yourDBName';
 console.log("Connecting to MongoDB...");
 const Uri= 'mongodb://127.0.0.1:27017/Employees'
