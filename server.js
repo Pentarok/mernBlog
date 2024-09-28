@@ -404,10 +404,12 @@ if(userExist){
 
 
         res.cookie('token', token, {
-  
-   sameSite: 'None',  // Allows cross-origin cookies, required when using secure cookies in cross-site requests
-   domain: https://mern-blog-chi-eight.vercel.app
+   httpOnly: true,
+   secure: process.env.NODE_ENV === 'production',
+   sameSite: 'None', // Required if cross-origin
+   domain: 'https://mern-blog-chi-eight.vercel.app' // Backend domain
 });
+
         
     }else{
         res.json({status:'405',message:'Your credentials are invalid'})
