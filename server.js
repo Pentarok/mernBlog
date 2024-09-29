@@ -22,7 +22,7 @@ const app = express();
 
 // CORS middleware configuration
 app.use(cors({
-  origin: 'https://front-blog-eta.vercel.app', // Allow requests only from this origin
+  origin: ["https://front-blog-eta.vercel.app"], // Allow requests only from this origin
   methods: ["GET", "POST", "PUT", "DELETE"], // Specify allowed methods
   credentials: true // Allow credentials (like cookies, authorization headers, etc.)
 }));
