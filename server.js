@@ -398,34 +398,44 @@ app.post('/signup',async (req,res)=>{
       }
       
 })
-app.post('/login',async (req,res)=>{
-    const {email,password}=req.body;
-const userExist = await UserModel.findOne({email:email});
-if(userExist){
-   bcrypt.compare(password,userExist.password,(err,isMatch)=>{
-    if(isMatch){
-        const token = jwt.sign({email:userExist.email,id:userExist._id,role:userExist.role,author:userExist.name},
-            "manu-secret-key",{expiresIn:'1d'}
-        )
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
 
+  try {
+    const userExist = await UserModel.findOne({ email: email });
 
-        res.cookie('token', token, {
-   httpOnly: true,
-   secure: process.env.NODE_ENV === 'production',
-   sameSite: 'None', // Required if cross-origin
-   domain: 'https://mern-blog-git-main-mak-pentaroks-projects.vercel.app' // Backend domain
-});
+    if (userExist) {
+      bcrypt.compare(password, userExist.password, (err, isMatch) => {
+        if (err) {
+          console.error('Error comparing passwords:', err);
+          return res.status(500).json({ message: 'Internal server error' });
+        }
 
-        
-    }else{
-        res.json({status:'405',message:'Your credentials are invalid'})
+        if (isMatch)   
+ {
+          const   token = jwt.sign({
+            email: userExist.email,
+            id: userExist._id,
+            role: userExist.role,
+            author: userExist.name,
+          },
+          'manu-secret-key',
+          { expiresIn: '1d' });
+
+          res.cookie('token', token, { httpOnly: true });
+          res.json({ userExist, message: 'Login success' });
+        } else {
+          res.json({ status: '401', message: 'Your credentials are invalid' }); // Use 401 for unauthorized
+        }
+      });
+    } else {
+      res.json({ message: 'Account does not exist' });
     }
-   }
-   )
-}else{
-    res.json('Account does not exist')
-}
-})
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 
 
