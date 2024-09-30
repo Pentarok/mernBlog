@@ -422,7 +422,12 @@ app.post('/login', async (req, res) => {
           'manu-secret-key',
           { expiresIn: '1d' });
 
-          res.cookie('token', token, { httpOnly: true });
+          res.cookie('token', token, { 
+  httpOnly: true, 
+  secure: process.env.NODE_ENV === 'production', 
+  sameSite: 'None'
+});
+
           res.json({ userExist, message: 'Login success' });
         } else {
           res.json({ status: '401', message: 'Your credentials are invalid' }); // Use 401 for unauthorized
