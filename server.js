@@ -396,7 +396,7 @@ app.post('/reset-password/:id/:token', async (req, res) => {
       user.password = hashedPassword;
       await user.save();
 
-      res.json({ message: "Password has been reset successfully" });
+      res.json({ message: "Password has been reset successfully" ,status:'Ok'});
     });
   } catch (error) {
     console.error(error);
