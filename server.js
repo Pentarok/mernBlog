@@ -117,7 +117,7 @@ const uploadToAws = (req, res, next) => {
 };
 
 
-const verifyUser = (req, res, next) => {
+const verifyAdmin = (req, res, next) => {
   const token = req.cookies.token;
 
   if (!token) {
@@ -141,7 +141,7 @@ const verifyUser = (req, res, next) => {
   }
 };
 
-app.get('/dashboard', verifyUser, (req, res) => {
+app.get('/dashboard', verifyAdmin, (req, res) => {
  
   res.json('success')
 });
