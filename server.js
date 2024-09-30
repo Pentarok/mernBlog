@@ -340,7 +340,7 @@ app.post('/forgot-password', async (req, res) => {
 
     // Define the reset URL to be sent in the email
 
-    const frontEndEnpoint=process.env.WEB_URL
+    const frontEndEnpoint='https://mern-blog-6mdu.vercel.app'
     const resetURL = `${frontEndEnpoint}/reset-password/${user._id}/${resetToken}`;
 
     // Email content
