@@ -514,25 +514,7 @@ const posts = await PostModel.find({})
 res.json({posts})
 })
 
-app.get('/user',(req,res)=>{
-    const oldtoken  = req.cookies.token;
 
-
-    try {
-        jwt.verify(oldtoken, "manu-secret-key", async (err, decoded) => {
-            if (err) {
-                return res.json("Token is invalid or expired");
-            } else {
-                console.log(decoded)
-               
-               res.json(decoded)
-               
-            }
-        });
-    } catch (error) {
-        res.status(500).json("Server error");
-    }
-})
 app.get('/userposts/:userId', async (req,res)=>{
     const { userId }=req.params;
     const userPost = await PostModel.find({user:userId})
