@@ -146,29 +146,30 @@ app.get('/dashboard', verifyAdmin, (req, res) => {
   res.json('success')
 });
 
-
-const verifyUser=(req,res,next)=>{
-  const token = req.cookies.token;
-  if(!token){
-  return    res.json("Token is missing");
-  }else{
-      jwt.verify(token,"manu-secret-key",(err,decoded)=>{
-          if(err){
-              res.json("Token error")
-          }else{
-              if(decoded.role='visitor'){
-                  next();
-              }else{
-                  return res.json("Invalid")
-              }
-          }
-      })
+const verifyUser = (req, res, next) => {
+  const token = req.cookies.token; // Get token from cookies
+  if (!token) {
+    return res.json("Token is missing");
+  } else {
+    jwt.verify(token, "manu-secret-key", (err, decoded) => {
+      if (err) {
+        return res.json("Token error");
+      } else {
+        if (decoded.role === 'visitor') {
+          req.user = decoded; // Attach decoded token to the request object
+          next(); // Pass control to the next middleware
+        } else {
+          return res.json("Invalid");
+        }
+      }
+    });
   }
-}
+};
 
-app.get('/verifyuser',verifyUser,(req,res)=>{
-  res.json("Success")
-})
+// Route that returns success along with decoded token data
+app.get('/verifyuser', verifyUser, (req, res) => {
+  res.json({ message: "Success", user: req.user }); // Respond with success and user data
+});
 
 
 
