@@ -147,6 +147,31 @@ app.get('/dashboard', verifyUser, (req, res) => {
 });
 
 
+const verifyUser=(req,res,next)=>{
+  const token = req.cookies.token;
+  if(!token){
+  return    res.json("Token is missing");
+  }else{
+      jwt.verify(token,"manu-secret-key",(err,decoded)=>{
+          if(err){
+              res.json("Token error")
+          }else{
+              if(decoded.role='visitor'){
+                  next();
+              }else{
+                  return res.json("Invalid")
+              }
+          }
+      })
+  }
+}
+
+app.get('/verifyuser',verifyUser,(req,res)=>{
+  res.json("Success")
+})
+
+
+
 app.post('/posts', uploadToAws, (req, res) => {
     const { content, title, summary } = req.body;
     const authorname = req.user.author; // Get the author name from the decoded token
