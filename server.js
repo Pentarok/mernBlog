@@ -486,26 +486,6 @@ app.post('/login', async (req, res) => {
 
 
 
-app.get('/user',(req,res)=>{
-    const oldtoken  = req.cookies.token;
-
-
-    try {
-        jwt.verify(oldtoken, "manu-secret-key", async (err, decoded) => {
-            if (err) {
-                return res.json("Token is invalid or expired");
-            } else {
-                console.log(decoded)
-                authorname=decoded.author;
-                userId = decoded.id;
-               res.json(decoded)
-               
-            }
-        });
-    } catch (error) {
-        res.status(500).json("Server error");
-    }
-})
 
 
 
@@ -536,26 +516,6 @@ app.get('/post/:id', async (req,res)=>{
 })
 
 
-
-app.get('/user/status',(req,res)=>{
-    const oldtoken  = req.cookies.token;
-
-
-    try {
-        jwt.verify(oldtoken, "manu-secret-key", async (err, decoded) => {
-            if (err) {
-                return res.json("Token is invalid or expired");
-            } else {
-                console.log(decoded)
-               
-               res.json('Ok')
-               
-            }
-        });
-    } catch (error) {
-        res.status(500).json("Server error");
-    }
-})
 
 app.post('/logout', (req, res) => {
     // Clear the token cookie by setting it to an empty string and expiring it immediately
