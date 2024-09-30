@@ -362,7 +362,7 @@ app.post('/forgot-password', async (req, res) => {
         return res.status(500).json({ error: "Failed to send email" });
       } else {
         console.log('Email sent: ' + info.response);
-        return res.json({ message: 'Password reset email sent' });
+        return res.json("success");
       }
     });
   } catch (error) {
