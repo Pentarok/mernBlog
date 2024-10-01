@@ -118,26 +118,26 @@ const uploadToAws = (req, res, next) => {
 
 
 const verifyAdmin = (req, res, next) => {
-  const token = req.cookies.token;
+  const token = req.headers.authorization?.split(' ')[1]; // Extract token from Authorization header
 
   if (!token) {
-      console.error("Token is missing");
-      return res.status(401).json({ message: "Token is missing" });
+    console.error("Token is missing");
+    return res.status(401).json({ message: "Token is missing" });
   } else {
-      jwt.verify(token, "manu-secret-key", (err, decoded) => {
-          if (err) {
-              console.error("Token verification error:", err);
-              return res.status(401).json({ message: "Token verification failed" });
-          } else {
-              if (decoded.role === 'admin') {
-                  console.log("Admin access granted");
-                  next(); // Proceed to the next middleware/route handler
-              } else {
-                  console.warn("User is not an admin");
-                  return res.status(403).json({ message: "You do not have admin access" });
-              }
-          }
-      });
+    jwt.verify(token, "manu-secret-key", (err, decoded) => {
+      if (err) {
+        console.error("Token verification error:", err);
+        return res.status(401).json({ message: "Token verification failed" });
+      } else {
+        if (decoded.role === 'admin') {
+          console.log("Admin access granted");
+          next(); // Proceed to the next middleware/route handler
+        } else {
+          console.warn("User is not an admin");
+          return res.status(403).json({ message: "You do not have admin access" });
+        }
+      }
+    });
   }
 };
 
@@ -147,19 +147,20 @@ app.get('/dashboard', verifyAdmin, (req, res) => {
 });
 
 const verifyUser = (req, res, next) => {
-  const token = req.cookies.token; // Get token from cookies
+  const token = req.headers.authorization?.split(' ')[1]; // Extract token from Authorization header
+
   if (!token) {
-    return res.json("Token is missing");
+    return res.status(401).json({ message: "Token is missing" });
   } else {
     jwt.verify(token, "manu-secret-key", (err, decoded) => {
       if (err) {
-        return res.json("Token error");
+        return res.status(401).json({ message: "Token verification failed" });
       } else {
         if (decoded.role === 'visitor') {
           req.user = decoded; // Attach decoded token to the request object
           next(); // Pass control to the next middleware
         } else {
-          return res.json("Invalid");
+          return res.status(403).json({ message: "Invalid access" });
         }
       }
     });
