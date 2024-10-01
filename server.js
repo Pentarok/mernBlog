@@ -92,27 +92,8 @@ const uploadToAws = (req, res, next) => {
         // Log the uploaded file information
         console.log("Request file info:", req.file);
 
-        // Token Check
-        const token = req.cookies.token;
-        if (!token) {
-            console.error("Token is missing.");
-            return res.status(401).json({ error: "Token is missing" });
-        }
-
-        // Verify token
-        jwt.verify(token, "manu-secret-key", (err, decoded) => {
-            if (err) {
-                console.error("Token verification failed:", err.message);
-                return res.status(401).json({ error: "Token is invalid or expired" });
-            }
-
-            // Add decoded user info to the request for later use
-            req.user = decoded;
-            console.log("Token successfully decoded:", decoded);
-            
-            // Proceed to the next middleware or route handler
-            next();
-        });
+        // Proceed to the next middleware or route handler
+        next();
     });
 };
 
