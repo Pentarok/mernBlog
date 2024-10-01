@@ -155,7 +155,8 @@ app.get('/verifyuser', verifyUser, (req, res) => {
 
 
 
-app.post('/posts', uploadToAws, (req, res) => {
+// Adjusted route definition for creating a post
+app.post('/posts', verifyUser, uploadToAws, (req, res) => {
     const { content, title, summary } = req.body;
     const authorname = req.user.author; // Get the author name from the decoded token
     const userId = req.user.id; // Get the user ID from the decoded token
@@ -187,6 +188,7 @@ app.post('/posts', uploadToAws, (req, res) => {
         res.status(500).json({ error: "Post creation failed", details: err });
     });
 });
+
 
 // Get all posts
 app.get('/posts', async (req, res) => {
