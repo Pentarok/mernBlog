@@ -424,7 +424,7 @@ app.post('/signup',async (req,res)=>{
       }
       
 })
-app.post('/login', async (req, res) => {
+/* app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -471,7 +471,44 @@ app.post('/login', async (req, res) => {
 
 
 
+ */
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
 
+  try {
+    const userExist = await UserModel.findOne({ email: email });
+
+    if (userExist) {
+      bcrypt.compare(password, userExist.password, (err, isMatch) => {
+        if (err) {
+          console.error('Error comparing passwords:', err);
+          return res.status(500).json({ message: 'Internal server error' });
+        }
+
+        if (isMatch) {
+          const token = jwt.sign({
+            email: userExist.email,
+            id: userExist._id,
+            role: userExist.role,
+            author: userExist.name,
+          }, 
+          'manu-secret-key', 
+          { expiresIn: '1d' });
+
+          // Send the token in the response
+          res.json({ token, user: userExist, message: 'Login success' });
+        } else {
+          res.status(401).json({ message: 'Your credentials are invalid' });
+        }
+      });
+    } else {
+      res.status(404).json({ message: 'Account does not exist' });
+    }
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 
 
